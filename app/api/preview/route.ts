@@ -2,10 +2,24 @@ import { IncomingHttpHeaders } from "http";
 import { cookies as nextCookies, draftMode } from "next/headers";
 import { NextRequest } from "next/server";
 import { SERVER_PROPS_ID, STATIC_PROPS_ID } from "next/constants";
+import { NextApiRequest } from "next";
 
 const PreviewCookies = {
   PREVIEW_DATA: "__next_preview_data",
   PRERENDER_BYPASS: "__prerender_bypass",
+};
+
+export const resolveServerUrl = (req: NextApiRequest | NextRequest) => {
+  // to preserve auth headers, use https if we're in our 3 main hosting options
+  const useHttps = (process.env.VERCEL || process.env.NETLIFY) !== undefined;
+  const host = (req.headers as Headers).get
+    ? (req.headers as Headers).get("x-forwarded-host") ||
+      (req.headers as Headers).get("host")
+    : (req as NextApiRequest).headers["x-forwarded-host"] ||
+      (req as NextApiRequest).headers.host;
+
+  // use https for requests with auth but also support unsecured http rendering hosts
+  return `${useHttps ? "https" : "http"}://${host}`;
 };
 
 export const cleanupNextPreviewCookies = (
@@ -69,7 +83,7 @@ export const getHeadersForPropagation = (
 };
 
 export const GET = async (request: NextRequest) => {
-  console.log("Preview request received");
+  console.log("Preview request received from: ", resolveServerUrl(request));
   const draft = await draftMode();
   const headers = request.headers;
   const responseHeaders: { [key: string]: string } = {};
@@ -82,7 +96,7 @@ export const GET = async (request: NextRequest) => {
     console.log("Draft mode enabled");
     draft.enable();
 
-    const requestUrl = new URL("/", "http://localhost:3000");
+    const requestUrl = new URL("/", resolveServerUrl(request));
 
     const cookieStore = await nextCookies();
 
@@ -114,6 +128,9 @@ export const GET = async (request: NextRequest) => {
       }
     }
 
+    requestUrl.searchParams.append('route', '/');
+    requestUrl.searchParams.append('item_id', '{00000000-0000-0000-0000-000000000000}');
+    requestUrl.searchParams.append('language', 'en');
     requestUrl.searchParams.append("timestamp", Date.now().toString());
 
     // Grab the Next.js preview cookies to send on to the render request
