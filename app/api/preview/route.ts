@@ -13,12 +13,14 @@ const PreviewCookies = {
  * @param {string | string[] | null} cookies cookie header value
  * @returns {string[] | null} filtered cookies
  */
-export const cleanupNextPreviewCookies = (cookies: string | string[] | null) => {
+export const cleanupNextPreviewCookies = (
+  cookies: string | string[] | null
+) => {
   if (!cookies) {
     return null;
   }
   if (!Array.isArray(cookies)) {
-    cookies = cookies.split(',');
+    cookies = cookies.split(",");
   }
   // Filter out Next.js preview cookies
   const filteredCookies = cookies.filter(
@@ -47,7 +49,9 @@ export const getQueryParamsForPropagation = (
 ): { [key: string]: string } => {
   const params: { [key: string]: string } = {};
 
-  const xVercelProtectionBypass = searchParams.get("x-vercel-protection-bypass");
+  const xVercelProtectionBypass = searchParams.get(
+    "x-vercel-protection-bypass"
+  );
   const xVercelSetBypassCookie = searchParams.get("x-vercel-set-bypass-cookie");
 
   if (xVercelProtectionBypass) {
@@ -128,7 +132,9 @@ export const GET = async (request: NextRequest) => {
       }
     }
 
-    requestUrl.searchParams.append("route", "/");
+    const route = request.nextUrl.searchParams.get("route") as string;
+
+    requestUrl.searchParams.append("route", route);
     requestUrl.searchParams.append(
       "item_id",
       "{00000000-0000-0000-0000-000000000000}"
@@ -173,9 +179,13 @@ export const GET = async (request: NextRequest) => {
       throw new Error(`Failed to render html for ${requestUrl.toString()}`);
     }
 
-    console.log("Cleaned cookies: ", cleanupNextPreviewCookies(convertedCookies));
+    console.log(
+      "Cleaned cookies: ",
+      cleanupNextPreviewCookies(convertedCookies)
+    );
 
-    responseHeaders["Set-Cookie"] = cleanupNextPreviewCookies(convertedCookies)?.join("; ") || "";
+    responseHeaders["Set-Cookie"] =
+      cleanupNextPreviewCookies(convertedCookies)?.join("; ") || "";
     responseHeaders["Content-Type"] = "text/html; charset=utf-8";
 
     console.log("Response headers: ", responseHeaders);
