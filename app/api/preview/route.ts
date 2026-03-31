@@ -98,7 +98,8 @@ export const GET = async (request: NextRequest) => {
   try {
     draft.enable();
 
-    const requestUrl = new URL("/", resolveServerUrl(request));
+    const route = request.nextUrl.searchParams.get("route") as string;
+    const requestUrl = new URL(route, resolveServerUrl(request));
 
     const cookieStore = await nextCookies();
 
@@ -131,8 +132,6 @@ export const GET = async (request: NextRequest) => {
         requestUrl.searchParams.append(key, propagatedQsParams[key]);
       }
     }
-
-    const route = request.nextUrl.searchParams.get("route") as string;
 
     requestUrl.searchParams.append("route", route);
     requestUrl.searchParams.append(
