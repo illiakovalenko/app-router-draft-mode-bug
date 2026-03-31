@@ -79,5 +79,9 @@ export default async function Home({
 }
 
 export const generateStaticParams = async () => {
-  return [{ path: [""] }, { path: ["about"] }];
+  return [
+    {
+      path: [],
+    },
+  ];
 };
