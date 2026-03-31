@@ -1,14 +1,18 @@
 import { draftMode } from "next/headers";
 import Image from "next/image";
 
-export default async function Home({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const draft = await draftMode();
 
   if (draft.isEnabled) {
     const params = await searchParams;
-    console.log('In draft mode with search params: ', params);
+    console.log("In draft mode with search params: ", params);
   } else {
-    console.log('Not in draft mode');
+    console.log("Not in draft mode");
   }
 
   return (
@@ -73,3 +77,7 @@ export default async function Home({ searchParams }: { searchParams: { [key: str
     </div>
   );
 }
+
+export const generateStaticParams = async () => {
+  return [{ path: [""] }, { path: ["about"] }];
+};

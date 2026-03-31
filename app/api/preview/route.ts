@@ -22,24 +22,6 @@ export const resolveServerUrl = (req: NextApiRequest | NextRequest) => {
   return `${useHttps ? "https" : "http"}://${host}`;
 };
 
-export const cleanupNextPreviewCookies = (
-  cookies: string | string[] | null
-) => {
-  if (!cookies) {
-    return null;
-  }
-  if (!Array.isArray(cookies)) {
-    cookies = cookies.split(",");
-  }
-  // Filter out Next.js preview cookies
-  const filteredCookies = cookies.filter(
-    (cookie: string) =>
-      !new RegExp(`^${PreviewCookies.PREVIEW_DATA}=`).test(cookie) &&
-      !new RegExp(`^${PreviewCookies.PRERENDER_BYPASS}=`).test(cookie)
-  );
-  return filteredCookies;
-};
-
 export const getQueryParamsForPropagation = (
   query: Partial<{ [key: string]: string | string[] }>
 ): { [key: string]: string } => {
@@ -145,7 +127,7 @@ export const GET = async (request: NextRequest) => {
       headers: propagatedHeaders,
     });
 
-    let html = await fetch(requestUrl.toString(), {
+    const html = await fetch(requestUrl.toString(), {
       credentials: "include",
       headers: propagatedHeaders,
       method: "GET",
@@ -172,24 +154,9 @@ export const GET = async (request: NextRequest) => {
       throw new Error(`Failed to render html for ${requestUrl.toString()}`);
     }
 
-    // replace phkey attribute with key attribute so that newly added renderings
-    // show correct placeholders, so save and refresh won't be needed after adding each rendering
-    html = html.replace(new RegExp("phkey", "g"), "key");
-
-    // When SSG, Next will attempt to perform a router.replace on the client-side to inject the query string parms
-    // to the router state. See https://github.com/vercel/next.js/blob/v10.0.3/packages/next/client/index.tsx#L169.
-    // However, this doesn't really work since at this point we're in the editor and the location.search has nothing
-    // to do with the Next route/page we've rendered. Beyond the extraneous request, this can result in a 404 with
-    // certain route configurations (e.g. multiple catch-all routes).
-    // The following line will trick it into thinking we're SSR, thus avoiding any router.replace.
-    html = html.replace(STATIC_PROPS_ID, SERVER_PROPS_ID);
-
     console.log("Converted cookies: ", convertedCookies);
 
-    // remove nextjs preview cookies to not leak them to the browser
-    const filteredCookies = cleanupNextPreviewCookies(convertedCookies);
-    console.log("Filtered cookies: ", filteredCookies);
-    responseHeaders["Set-Cookie"] = filteredCookies?.join("; ") || "";
+    responseHeaders["Set-Cookie"] = convertedCookies?.join("; ") || "";
     responseHeaders["Content-Type"] = "text/html; charset=utf-8";
 
     console.log("Response headers: ", responseHeaders);
