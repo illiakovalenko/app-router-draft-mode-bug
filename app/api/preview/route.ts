@@ -1,7 +1,6 @@
 import { IncomingHttpHeaders } from "http";
 import { cookies as nextCookies, draftMode } from "next/headers";
 import { NextRequest } from "next/server";
-import { SERVER_PROPS_ID, STATIC_PROPS_ID } from "next/constants";
 import { NextApiRequest } from "next";
 
 const PreviewCookies = {
@@ -23,19 +22,20 @@ export const resolveServerUrl = (req: NextApiRequest | NextRequest) => {
 };
 
 export const getQueryParamsForPropagation = (
-  query: Partial<{ [key: string]: string | string[] }>
+  searchParams: URLSearchParams
 ): { [key: string]: string } => {
   const params: { [key: string]: string } = {};
-  if (query["x-vercel-protection-bypass"]) {
-    params["x-vercel-protection-bypass"] = query[
-      "x-vercel-protection-bypass"
-    ] as string;
+
+  const xVercelProtectionBypass = searchParams.get("x-vercel-protection-bypass");
+  const xVercelSetBypassCookie = searchParams.get("x-vercel-set-bypass-cookie");
+
+  if (xVercelProtectionBypass) {
+    params["x-vercel-protection-bypass"] = xVercelProtectionBypass;
   }
-  if (query["x-vercel-set-bypass-cookie"]) {
-    params["x-vercel-set-bypass-cookie"] = query[
-      "x-vercel-set-bypass-cookie"
-    ] as string;
+  if (xVercelSetBypassCookie) {
+    params["x-vercel-set-bypass-cookie"] = xVercelSetBypassCookie;
   }
+
   return params;
 };
 
@@ -69,10 +69,6 @@ export const GET = async (request: NextRequest) => {
   const draft = await draftMode();
   const headers = request.headers;
   const responseHeaders: { [key: string]: string } = {};
-  const query: { [key: string]: string } = {};
-  request.nextUrl.searchParams.forEach((value: string, key: string) => {
-    query[key] = value;
-  });
 
   try {
     draft.enable();
@@ -92,7 +88,9 @@ export const GET = async (request: NextRequest) => {
       }
     );
 
-    const propagatedQsParams = getQueryParamsForPropagation(query);
+    const propagatedQsParams = getQueryParamsForPropagation(
+      request.nextUrl.searchParams
+    );
     const propagatedHeaders = getHeadersForPropagation(headers);
     const convertedCookies = cookieStore
       .getAll()
