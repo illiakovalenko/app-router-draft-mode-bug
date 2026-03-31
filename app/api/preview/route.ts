@@ -8,6 +8,27 @@ const PreviewCookies = {
   PRERENDER_BYPASS: "__prerender_bypass",
 };
 
+/**
+ * Filters out Next.js preview cookies from a cookie string or array
+ * @param {string | string[] | null} cookies cookie header value
+ * @returns {string[] | null} filtered cookies
+ */
+export const cleanupNextPreviewCookies = (cookies: string | string[] | null) => {
+  if (!cookies) {
+    return null;
+  }
+  if (!Array.isArray(cookies)) {
+    cookies = cookies.split(',');
+  }
+  // Filter out Next.js preview cookies
+  const filteredCookies = cookies.filter(
+    (cookie: string) =>
+      !new RegExp(`^${PreviewCookies.PREVIEW_DATA}=`).test(cookie) &&
+      !new RegExp(`^${PreviewCookies.PRERENDER_BYPASS}=`).test(cookie)
+  );
+  return filteredCookies;
+};
+
 export const resolveServerUrl = (req: NextApiRequest | NextRequest) => {
   // to preserve auth headers, use https if we're in our 3 main hosting options
   const useHttps = (process.env.VERCEL || process.env.NETLIFY) !== undefined;
@@ -152,9 +173,9 @@ export const GET = async (request: NextRequest) => {
       throw new Error(`Failed to render html for ${requestUrl.toString()}`);
     }
 
-    console.log("Converted cookies: ", convertedCookies);
+    console.log("Cleaned cookies: ", cleanupNextPreviewCookies(convertedCookies));
 
-    responseHeaders["Set-Cookie"] = convertedCookies?.join("; ") || "";
+    responseHeaders["Set-Cookie"] = cleanupNextPreviewCookies(convertedCookies)?.join("; ") || "";
     responseHeaders["Content-Type"] = "text/html; charset=utf-8";
 
     console.log("Response headers: ", responseHeaders);
