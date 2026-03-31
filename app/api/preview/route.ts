@@ -93,7 +93,6 @@ export const GET = async (request: NextRequest) => {
   });
 
   try {
-    console.log("Draft mode enabled");
     draft.enable();
 
     const requestUrl = new URL("/", resolveServerUrl(request));
@@ -128,9 +127,12 @@ export const GET = async (request: NextRequest) => {
       }
     }
 
-    requestUrl.searchParams.append('route', '/');
-    requestUrl.searchParams.append('item_id', '{00000000-0000-0000-0000-000000000000}');
-    requestUrl.searchParams.append('language', 'en');
+    requestUrl.searchParams.append("route", "/");
+    requestUrl.searchParams.append(
+      "item_id",
+      "{00000000-0000-0000-0000-000000000000}"
+    );
+    requestUrl.searchParams.append("language", "en");
     requestUrl.searchParams.append("timestamp", Date.now().toString());
 
     // Grab the Next.js preview cookies to send on to the render request
@@ -138,29 +140,31 @@ export const GET = async (request: NextRequest) => {
       propagatedHeaders.cookie ? propagatedHeaders.cookie + ";" : ""
     }${convertedCookies.join(";")}`;
 
-    console.log("Request URL: ", requestUrl.toString());
-    console.log("Propagated headers: ", propagatedHeaders);
+    console.log("Internal Request:", {
+      url: requestUrl.toString(),
+      headers: propagatedHeaders,
+    });
 
     let html = await fetch(requestUrl.toString(), {
       credentials: "include",
       headers: propagatedHeaders,
       method: "GET",
     })
-    .then((response) => {
-      console.log("Response: ", response);
-      return response.text();
-    })
-    .catch((error) => {
-      console.error("Error fetching page: ", error);
-      // We need to handle not found error provided by Vercel
-      // for `fallback: false` pages
-      if (error.response.status === 404) {
-        console.error("Page not found: ", error.response);
-        return error.response;
-      }
+      .then((response) => {
+        console.log("Response: ", response);
+        return response.text();
+      })
+      .catch((error) => {
+        console.error("Error fetching page: ", error);
+        // We need to handle not found error provided by Vercel
+        // for `fallback: false` pages
+        if (error.response.status === 404) {
+          console.error("Page not found: ", error.response);
+          return error.response;
+        }
 
-      throw error;
-    });
+        throw error;
+      });
 
     console.log("HTML: ", html);
 
@@ -180,15 +184,15 @@ export const GET = async (request: NextRequest) => {
     // The following line will trick it into thinking we're SSR, thus avoiding any router.replace.
     html = html.replace(STATIC_PROPS_ID, SERVER_PROPS_ID);
 
-    console.log('Converted cookies: ', convertedCookies);
+    console.log("Converted cookies: ", convertedCookies);
 
     // remove nextjs preview cookies to not leak them to the browser
     const filteredCookies = cleanupNextPreviewCookies(convertedCookies);
-    console.log('Filtered cookies: ', filteredCookies);
+    console.log("Filtered cookies: ", filteredCookies);
     responseHeaders["Set-Cookie"] = filteredCookies?.join("; ") || "";
     responseHeaders["Content-Type"] = "text/html; charset=utf-8";
 
-    console.log('Response headers: ', responseHeaders);
+    console.log("Response headers: ", responseHeaders);
 
     return new Response(html, { status: 200, headers: responseHeaders });
   } catch (error) {
